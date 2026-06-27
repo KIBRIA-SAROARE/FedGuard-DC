@@ -20,13 +20,13 @@ The framework is validated on measured **Positive Sequence Phasor Domain (PSPD)*
 
 ```
 FedGuard-DC/
-├── Data/                                   # EMT measurement CSV files (DC1–DC4)
+├── Data/                                   # PSPD measurement CSV files (DC1–DC4)
 │   ├── DC1.csv                             # DC1 @ Bus 4  (~350 MW, ~120 k samples @ 1 kHz)
 │   ├── DC2.csv                             # DC2 @ Bus 23 (~200 MW)
 │   ├── DC3.csv                             # DC3 @ Bus 18 (~150 MW)
 │   └── DC4.csv                             # DC4 @ Bus 16 (~300 MW)
 ├── Figures/                                # All paper-ready output figures (PDF/PNG)
-├── Modified IEEE 39 Bus with Data Center Simulink/   # PSCAD/EMTDC simulation files
+├── Modified IEEE 39 Bus with Data Center Simulink/   # Matlab/Simulink simulation files
 ├── Copy_of_FedGuard_DC_NAPS2026.ipynb      # Main Colab notebook (self-contained)
 ├── copy_of_fedguard_dc_naps2026.py         # Plain Python equivalent of the notebook
 └── README.md
