@@ -13,14 +13,14 @@ Hyperscale data centers (DCs) are now among the single largest loads connected t
 - **FDIA detection** — a calibrated, physics-informed anomaly score flags corrupted measurement windows at the local controller before they reach the global model.
 - **Robustness** — differential-privacy noise and coordinate-wise trimmed-mean aggregation protect against a compromised local controller.
 
-The framework is validated on measured **Positive Sequence Phasor Domain (PSPD)** data from four DC loads (150–350 MW) embedded in the **IEEE 39-bus New England system**.
+The framework is validated on measured **Electro-magnetic Transient (EMT)** data from four DC loads (150–350 MW) embedded in the **IEEE 39-bus New England system**.
 
 
 ## Repository Structure
 
 ```
 FedGuard-DC/
-├── Data/                                   # PSPD measurement CSV files (DC1–DC4)
+├── Data/                                   # EMT measurement CSV files (DC1–DC4)
 │   ├── DC1.csv                             # DC1 @ Bus 4  (~350 MW, ~120 k samples @ 1 kHz)
 │   ├── DC2.csv                             # DC2 @ Bus 23 (~200 MW)
 │   ├── DC3.csv                             # DC3 @ Bus 18 (~150 MW)
@@ -87,7 +87,7 @@ The **IEEE 39-bus New England system** (10 machines, 345 kV, 34 lines) is used w
 | DC3 | 18 | 150 | 136.6 | 0.47 | 35 | 40 |
 | DC4 | 16–24 | 300 | 274.1 | 0.43 | 34 | 40 |
 
-PSPD simulations were run in **Matlab/Simulink** at 1 kHz for 120 s per DC (~120,474 samples each). The simulation files are in `Modified IEEE 39 Bus with Data Center Simulink/`.
+EMT simulations were run in **Matlab/Simulink** at 1 kHz for 120 s per DC (~120,474 samples each). The simulation files are in `Modified IEEE 39 Bus with Data Center Simulink/`.
 
 
 ## Results Summary
@@ -203,4 +203,4 @@ After a full run, the following PDFs are saved (ready for the paper):
 
 
 # Acknowledgement 
-This readme file is created with the help of Generative AI
+This readme file is prepared with the help of Generative AI
