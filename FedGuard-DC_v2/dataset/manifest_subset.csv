@@ -1,0 +1,7 @@
+scenario,dc_index,dc_name,bus,Pdc_MW,workload_mode,rows,file
+S05_load_step,1,DC1,4,350,1,30001,dataset\clean\S05_load_step_DC1.csv
+S05_load_step,2,DC2,23,200,2,30001,dataset\clean\S05_load_step_DC2.csv
+S05_load_step,3,DC3,18,150,4,30001,dataset\clean\S05_load_step_DC3.csv
+S05_load_step,4,DC4,16,300,1,30001,dataset\clean\S05_load_step_DC4.csv
+S05_load_step,5,DC5,20,450,4,30001,dataset\clean\S05_load_step_DC5.csv
+S05_load_step,6,DC6,8,250,2,30001,dataset\clean\S05_load_step_DC6.csv
