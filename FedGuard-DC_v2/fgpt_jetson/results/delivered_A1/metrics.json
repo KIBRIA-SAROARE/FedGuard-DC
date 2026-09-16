@@ -1,0 +1,81 @@
+{
+  "test": "delivered_A1",
+  "dc": 1,
+  "scenario": "S02_fault_100ms",
+  "samples": 29801,
+  "windows": 742,
+  "windows_valid": 734,
+  "windows_pos": 136,
+  "threshold": -0.30484882404254743,
+  "streaming_vs_batch_max_abs_diff": 2.4902578594776514e-06,
+  "roc_auc": 0.9979342907731654,
+  "pr_auc": 0.9774192881337723,
+  "f1": 0.9784172661870504,
+  "precision": 0.9577464788732394,
+  "recall": 1.0,
+  "fpr": 0.010033444816053512,
+  "n_pos": 136,
+  "n_neg": 598,
+  "delay_s_notebook_definition": 0.0,
+  "attack_windows": [
+    {
+      "atype": 1,
+      "t0": 82.73,
+      "t1": 112.87,
+      "detected": true,
+      "decision_delay_s": 0.14999999999999147
+    },
+    {
+      "atype": 1,
+      "t0": 45.12,
+      "t1": 55.31,
+      "detected": true,
+      "decision_delay_s": 0.1600000000000037
+    },
+    {
+      "atype": 1,
+      "t0": 54.62,
+      "t1": 69.81,
+      "detected": true,
+      "decision_delay_s": 0.2600000000000051
+    }
+  ],
+  "post_fault_59.9_70s": {
+    "neg_windows": 0,
+    "alarms": 0
+  },
+  "dominant_term_share_in_alarms": {
+    "|r_bal|": 0.0,
+    "|r_aux|": 0.0,
+    "|r_cool|": 0.0,
+    "|r_ups|": 0.0,
+    "|r_qp|": 0.0,
+    "|r_pv|": 0.0,
+    "|r_reg|": 0.0,
+    "e_rec": 1.0,
+    "e_fc": 0.0
+  },
+  "domain_share_in_alarms": {
+    "single-domain": 0.9932432432432432,
+    "cross-domain": 0.006756756756756757
+  },
+  "latency_ms": {
+    "per_sample_features_mean": 0.057599471561357,
+    "per_sample_features_p99": 0.090018,
+    "per_window_tcn_fusion_mean": 1.2629360876010782,
+    "per_window_p50": 1.2346445,
+    "per_window_p99": 1.6356245900000015,
+    "per_window_max": 2.595116,
+    "decision_period_ms": 400.0,
+    "cpu_ms_per_second_of_telemetry": 8.917287375138397
+  },
+  "csec": {
+    "record_level_compute_s_all_sites": 0.11671288200159324,
+    "descriptors_this_site": 7,
+    "descriptor_bytes": 15,
+    "uplink_bytes_this_site": 105
+  },
+  "wall_s": 2.7524469689997204,
+  "realtime_paced": false,
+  "peak_rss_MiB": 268.8203125
+}
