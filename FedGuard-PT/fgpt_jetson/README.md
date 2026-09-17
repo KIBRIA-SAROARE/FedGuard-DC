@@ -1,67 +1,112 @@
-# FedGuard-PT on Jetson Orin Nano: single-site monitor (DC1), ported from the Phase-2 notebook
+# FedGuard-PT real-time experiment on Jetson Orin Nano (one site, DC1)
 
-This package replaces the earlier re-implementation. The model, residuals, attack generators, CSEC,
-fusion and metrics are ported from `FedGuard_PT_Phase2_Final.ipynb` (functions keep their notebook names).
-
-- Model: the notebook's depthwise-separable causal TCN, 3,597 parameters (3,376 shared).
-- Code: pure NumPy on the board (Ubuntu 24.04 apt packages). No PyTorch or CUDA needed.
+The model, features, attacks, CSEC and fusion are ported from `FedGuard_PT_Phase2_Final.ipynb` (`fgpt/nb.py`, `fgpt/tcn_np.py`).
+Every monitor stream replays one 300 s record at **100 Hz wall clock** on the board.
+This is a hardware-in-the-loop replay of the simulated IEEE 39-bus telemetry, not live field measurements. State it that way in the paper.
 
 ## 1. Setup (once)
 
 ```bash
-cd ~/fgpt_jetson
+cd FedGuard-DC/FedGuard-PT/fgpt_jetson      # or wherever this folder is
 chmod +x *.sh
-./setup_jetson.sh      # numpy, pandas, scipy, scikit-learn, matplotlib, psutil, tk
-./get_data.sh 1        # 66 clean CSVs + S02_fault_100ms_DC1_A*.csv + attack_log.csv (sparse git)
-sudo nvpmodel -q       # record the power mode; keep it fixed for every reported run
+./setup_jetson.sh     # apt: numpy pandas scipy sklearn matplotlib psutil tk tmux fonts
+./get_data.sh 1       # links ../dataset if present, otherwise sparse-clones FedGuard-PT/dataset
 ```
 
-A private repo will ask for a GitHub token. You can also copy `FedGuard-DC_v2/dataset/` by USB and run
-`ln -sfn /path/to/dataset data/dataset`.
+Before starting, fix the board state and do not change it during the run:
+
+- Keep the same power mode as your earlier run (`sudo nvpmodel -q` showed 25W).
+- Close the browser and other apps.
+- Keep the fan setting unchanged.
+
+The run records `nvpmodel -q` and `jetson_clocks --show` in `results_rt/experiment_plan.json`.
 
 ## 2. Run
 
 ```bash
-./run_all.sh                 # idle baseline -> training -> monitor -> latency sweep -> figures
-python3 live_view.py         # live display: DC1, S02 fault + repository attack A1
-python3 live_view.py --test T3 --speed 5
+tmux new -s fgpt
+./run_experiment.sh full        # Ctrl-b d to detach; tmux attach -t fgpt to return
 ```
 
-`./run_all.sh --realtime` paces the monitor replay at wall-clock 100 Hz (5 min per test).
+- `./run_experiment.sh quick` is a short check: S02 fold with no_attack, T1, T3, A1, plus S07 control.
+- If the run stops, run the same command again. Finished trainings and streams are skipped.
 
-| step | what runs | what is measured |
+| stage | script | content |
 |---|---|---|
-| `measure_idle.py` | nothing (30 s) | idle CPU, RAM, VDD_IN, temperature |
-| `train_edge.py` | notebook `run_fold` for **FedGuard-PT**, LOSO fold with **S02 held out**. Calibration on S01. Six sites trained on S01/S03/S04/S05/S06 in one process: 25 rounds, int8 + error feedback, DP clip, trimmed mean. Fusion + CSEC (κ, η) + threshold on the S01 validation mixture (seed 7) | per-site local training time per round, uplink/downlink bytes, parameters, model size, peak RSS |
-| `run_monitor.py` | DC1 replays its telemetry sample by sample. Every 40 samples a 1.28 s window is scored | window ROC-AUC/F1/precision/recall/FPR, detection delay, post-fault alarms, feature latency per sample, TCN+fusion latency per window, streaming = batch check |
-| `bench_latency.py` | batch-1 forward, NumPy at 1/2/4/6 threads (and PyTorch if installed) | per-window latency |
-| `make_figures.py` | waveforms per test, latency, resources, training/communication | `results/figures/*.pdf/png`, `SUMMARY.md` |
+| idle | `measure_idle.py` | 60 s at the start and 60 s at the end. Board power, CPU, RAM, temperature |
+| training | `train_edge.py` | 5 leave-one-scenario-out folds (S02–S06 held out) + FULL fold. Six sites emulated in one process, 25 rounds, int8 uplink, trimmed mean |
+| streams | `rt_monitor.py` | per LOSO fold: `no_attack`, `T1`, `T2`, `T3a`, `T3`, `A1`–`A5` on the held-out scenario (50 streams). FULL fold: control-path S07–S11 (5 streams) |
+| latency sweep | `bench_latency.py` | TCN forward, batch 1, 1/2/4/6 threads |
+| live | `live_capture.py` | real-time dashboard for S02-A1, S02-no_attack, S02-T3, S07-control. Snapshots at the grid event, attack onsets and the end |
+| figures | `paper_figures.py` | figures, LaTeX tables, `numbers.json` |
 
-Tests in `run_monitor.py` (all DC1, held-out `S02_fault_100ms`):
+**Duration estimate:**
 
-- `delivered_A1`: the repository file `S02_fault_100ms_DC1_A1.csv` (your attacked dataset)
-- `no_attack`: the clean fault record (every alarm is false)
-- `T1`, `T2`, `T3a`, `T3`: the notebook's test attacks, regenerated with its seeds (2026 + 1000k + 7·scenario index)
+- Training: the earlier board run measured 428.7 s plus 75.8 s of fusion fitting for one fold. Six folds are about 51 min.
+- Streams: 55 × (298 s + 20 s cooldown) ≈ 4.9 h, plus per-stream preparation.
+- Live captures: 4 × about 5 min.
+- Total: roughly 6–7 h.
 
-## 3. What matches the notebook, and what does not
+## 3. What each stream measures
 
-| item | status |
+| quantity | definition |
 |---|---|
-| residuals, calibration, T1/T2/T3a/T3 generators, CSEC, fusion, metrics | same code (`fgpt/nb.py`) |
-| TCN forward / backward / Adam | NumPy port. Checked against PyTorch with identical weights: forward 1.7e-16, gradients 1.5e-8 (float32 cast), 3 Adam steps 5e-10 |
-| parameters, bytes | 3,597 / 3,376 shared. 3,504 B uplink and 13,504 B downlink per site per round, 99.66 KiB/round, 2.433 MiB over 25 rounds, 15 B CSEC descriptor. These match the paper's 99.7 KiB and 2.43 MiB |
-| trained weights | not in the notebook, so they are **retrained on the board**. PyTorch initialisation and shuffling RNG streams differ from Colab, so detection numbers are not bit-identical to the paper's LOSO:S02 fold |
-| federation | six sites emulated in one process on the board. Per-site time and bytes are measured, but no network link is exercised |
-| CSEC | notebook's record-level `csec_signals()` over the six sites' replayed telemetry, computed before the replay. It is not causal (event depth and peers ±2 s), so a live deployment adds up to event length + 2 s delay |
-| fusion data | as in the notebook, fusion and threshold use all six sites' S01 validation windows |
-| paper latency 2.91 ms | PyTorch on a Colab CPU. `bench_latency.py` reports both backends on the board |
+| feature update per sample | wall time to update the 10 channels for one 10 ms sample |
+| sample with TCN + fusion | wall time of the samples (every 40th) that also run the TCN and fusion |
+| start lateness | processing start minus the scheduled 10 ms arrival (Python sleep jitter plus any backlog) |
+| deadline misses | samples whose processing ended after their 10 ms slot |
+| CSEC release wait | time a window's score waits until its CSEC inputs are causally known (see below) |
+| detection | notebook window metrics (ROC-AUC, F1, precision, recall, FPR), per-attack detection delay |
+| resources | tegrastats every 0.5 s (VDD_IN, CPU/GPU/SOC rails, GR3D load, temperatures) and psutil process CPU/RSS |
+
+**CSEC in real time.** The notebook computes CSEC over the whole record. `fgpt/csec_rt.py` keeps the same values but releases them only when a live site could know them:
+
+- the site's own voltage event has ended;
+- 2 s have passed since the event onset;
+- every matched peer's event has ended, and its 15-byte descriptor has arrived.
+
+Descriptor transport delay is assumed to be 0 ms (`--net-delay-ms` changes it). Each window therefore gets two decisions:
+
+- a provisional score at window end, without CSEC;
+- the released score, which equals the notebook score.
+
+Both detection delays are reported.
 
 ## 4. Outputs
 
 ```
-results/train_log.json  system_info.json  run_log.txt
-results/bundle/DC<k>.npz  calib_DC<k>.json  fusion.json  uplink_message_example.bin
-results/<test>/metrics.json  windows.csv  signals.npz  latency_sample_ms.csv  latency_window_ms.csv
-results/resources_{idle,train,monitor}.csv  tegrastats_*.log  bench_latency.csv
-results/figures/SUMMARY.md  Fig_<test>.pdf/png  Fig_<test>_zoom_40_120s  Fig_latency  Fig_resources  Fig_training_comm
+results_rt/experiment_plan.json  experiment_log.txt  idle_start/  idle_end/
+results_rt/folds/<fold>/bundle/  train_log.json  resources_train.csv  tegrastats_train.log  (bench_latency.csv in the S02 fold)
+results_rt/streams/<fold>/<test>_<scenario>/metrics.json  windows.csv  sample_timing.npz  signals.npz  resources.csv  tegrastats.log
+results_rt/live/*.png|pdf
+results_rt/paper/Fig_rt_*.pdf|png  Table_rt_*.tex|csv  numbers.json
 ```
+
+## 5. Paper figures (`results_rt/paper/`)
+
+| file | use |
+|---|---|
+| `Fig_rt_timeline_S02_fault_100ms_A1_S02_fault_100ms_zoom_40_120s` | fault at 60 s overlapping repository FDIA A1: voltage, reported vs facility power, provisional/released score, alarms |
+| `Fig_rt_timeline_S02_fault_100ms_no_attack_*` | the same fault with no attack (false-alarm behaviour) |
+| `Fig_rt_timeline_S02_fault_100ms_T3_*` | cross-domain T3 attack |
+| `Fig_rt_timeline_FULL_ctrl_S07_atk_false_ups_zoom_120_210s` | control-path false UPS transfer at DC1 |
+| `Fig_rt_detection_by_regime` | ROC-AUC, F1, FPR (mean ± std over the 5 LOSO folds) for T1, T2, T3a, T3, A1–A5, no attack |
+| `Fig_rt_disturbance_false_alarms` | FPR per held-out disturbance scenario; label = false alarms / negative windows within 10 s of the event |
+| `Fig_rt_detection_delay` | per-attack detection delay, provisional vs released |
+| `Fig_rt_control_path` | S07–S11 at DC1 (S07 targets DC1; S08–S11 show DC1 false alarms) |
+| `Fig_rt_latency` | CDF of per-sample processing and start lateness vs the 10 ms period; CDF of CSEC release wait |
+| `Fig_rt_resources`, `Fig_rt_resources_timeseries_*` | idle vs training vs real-time monitoring: board power, process CPU, RSS, T_j |
+| `Fig_rt_training_communication` | DC1 local training time per round (all folds), convergence, uplink/downlink bytes |
+| `results_rt/live/*` | dashboard snapshots taken during the live runs |
+
+Every value drawn is also written to `numbers.json`, `Table_rt_detection.tex`, `Table_rt_edge_resources.tex` and `Table_rt_all_streams.csv`. Copy numbers into the paper from those files only.
+`paper_figures.py` refuses streams that were not run at 100 Hz wall clock.
+
+## 6. Statements the paper must carry
+
+- The telemetry is simulated (IEEE 39-bus phasor model, synthetic AI workload) and replayed in real time on the board.
+- Federated training runs all six sites in one process on the board. Per-site time and bytes are measured; no network link is exercised.
+- CSEC descriptors are released causally from pre-computed peer events, with an assumed 0 ms transport delay.
+- Only DC1 runs as a live monitor. The other five sites supply CSEC descriptors.
+- Weights are trained on the board, so detection numbers are not identical to the notebook run.
+- The 2026-09-15 board run (`results/`, not paced) measured throughput, not real-time behaviour. Do not mix it with `results_rt/`.

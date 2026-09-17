@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Per-window inference latency of the deployed DC model: NumPy port (threads sweep) and, if PyTorch
 is importable on the board, the notebook's PyTorch module with the same weights (the paper's 2.91 ms
-figure was PyTorch on a Colab CPU). Output: results/bench_latency.csv
+figure was PyTorch 2.14 on the cloud CPU container that ran the notebook). Output: results/bench_latency.csv
 """
 import argparse
 import csv

@@ -470,8 +470,26 @@ class Merged(WinSet):
         self.end = self.starts + CFG["WIN"] - 1
 
 
+CONTROL_PATH = {
+    "S07_atk_false_ups":    dict(targets=[1, 4], t0=140.0, t1=170.0, kind="false UPS transfer", code=1),
+    "S08_atk_load_alter":   dict(targets=[2, 5], t0=100.0, t1=160.0, kind="load altering", code=2),
+    "S09_atk_sensor_spoof": dict(targets=[3],    t0=180.0, t1=220.0, kind="voltage sensor spoof", code=4),
+    "S10_atk_cooling":      dict(targets=[6],    t0=200.0, t1=250.0, kind="cooling setpoint", code=3),
+    "S11_fault_plus_atk":   dict(targets=[6],    t0=62.0,  t1=92.0,  kind="load altering + fault", code=2),
+}
+
+
 def control_labels(scen, k):
-    return np.zeros(len(tvec()), np.int8)  # EDGE: only attack-free scenarios are used for training
+    """0 clean, 1 attacked, -1 recovery tail (notebook section 8)."""
+    lab = np.zeros(len(tvec()), np.int8)
+    spec = CONTROL_PATH.get(scen)
+    if spec is None or k not in spec["targets"]:
+        return lab
+    i0, i1 = _idx(spec["t0"], spec["t1"])
+    lab[i0:i1] = LBL_ATTACK
+    i_rec = min(len(tvec()), i1 + int(CFG["RECOVERY_S"] / CFG["DT"]))
+    lab[i1:i_rec] = LBL_RECOVERY
+    return lab
 
 
 # ----------------------------------------------------------------------------- section 12 (CSEC)

@@ -44,14 +44,16 @@ def main():
     ap.add_argument("--test-scenario", default="S02_fault_100ms")
     ap.add_argument("--mode", default="partial", choices=["partial", "local"],
                     help="partial = FedGuard-PT (notebook default); local = Local-only baseline")
+    ap.add_argument("--resource-interval", type=float, default=0.5)
     args = ap.parse_args()
     nb.DATASET_DIR = args.dataset
     out = os.path.join(args.results, "bundle")
     os.makedirs(out, exist_ok=True)
     mon = ResourceMonitor(os.path.join(args.results, "resources_train.csv"),
-                          os.path.join(args.results, "tegrastats_train.log"), 0.5).start()
+                          os.path.join(args.results, "tegrastats_train.log"), args.resource_interval).start()
     T = {}
     clients = list(range(1, 7))
+    # "FULL" = notebook's FULL fold (all six attack-free scenarios; used for control-path S07-S11 tests)
     train_scens = [s for s in nb.CFG["ATTACK_FREE"] if s != args.test_scenario]
     print(f"[fold] LOSO:{args.test_scenario}  train={train_scens}  mode={args.mode}")
 
